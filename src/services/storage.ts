@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS: Settings = {
     anthropic: "",
     google: "",
   },
-  defaultModel: "gpt-4",
+  defaultModel: "gemini-2.0-flash",
   defaultTemperature: 0.7,
   defaultMaxTokens: 2000,
 };
