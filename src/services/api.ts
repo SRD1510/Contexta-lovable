@@ -55,13 +55,13 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     apiEndpoint: "https://api.anthropic.com/v1/messages",
     requiresApiKey: true,
   },
-  "gemini-pro": {
-    id: "gemini-pro",
-    name: "Gemini Pro",
+  "gemini-2.0-flash": {
+    id: "gemini-2.0-flash-exp",
+    name: "Gemini 2.0 Flash",
     provider: "google",
-    contextWindow: 32768,
+    contextWindow: 1048576,
     maxOutputTokens: 8192,
-    apiEndpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+    apiEndpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
     requiresApiKey: true,
   },
 };
