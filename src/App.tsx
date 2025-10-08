@@ -7,8 +7,6 @@ import { useAppState } from "@/hooks/useAppState";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatView } from "@/components/ChatView";
 import { InputBox } from "@/components/InputBox";
-import { ContextPanel } from "@/components/ContextPanel";
-import { ModelSwitcher } from "@/components/ModelSwitcher";
 import { SettingsModal } from "@/components/SettingsModal";
 import { sendMessage, MODEL_CONFIGS } from "@/services/api";
 import { storage } from "@/services/storage";
@@ -185,9 +183,14 @@ function ContextManager() {
       <Sidebar
         conversations={state.conversations}
         activeId={state.active_conversation_id}
+        activeConversation={activeConversation}
         onNewConversation={handleNewConversation}
         onSelectConversation={loadConversation}
         onDeleteConversation={deleteConversation}
+        onSummarize={handleSummarize}
+        onStartFresh={handleStartFresh}
+        onExport={handleExport}
+        disabled={isLoading}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -208,21 +211,14 @@ function ContextManager() {
 
         <ChatView messages={activeConversation?.messages || []} />
 
-        <div>
-          <ModelSwitcher
-            currentModel={currentModel}
-            onModelChange={handleModelChange}
-            hasMessages={(activeConversation?.messages.length || 0) > 0}
-          />
-          <InputBox onSend={handleSendMessage} disabled={isLoading} isLoading={isLoading} />
-          <ContextPanel
-            conversation={activeConversation}
-            onSummarize={handleSummarize}
-            onStartFresh={handleStartFresh}
-            onExport={handleExport}
-            disabled={isLoading}
-          />
-        </div>
+        <InputBox 
+          onSend={handleSendMessage} 
+          disabled={isLoading} 
+          isLoading={isLoading}
+          currentModel={currentModel}
+          onModelChange={handleModelChange}
+          hasMessages={(activeConversation?.messages.length || 0) > 0}
+        />
       </div>
     </div>
   );
