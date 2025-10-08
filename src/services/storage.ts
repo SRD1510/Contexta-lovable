@@ -1,0 +1,56 @@
+import { AppState, Conversation, Settings } from "@/types";
+
+const STORAGE_KEY = "context-manager-state";
+
+const DEFAULT_SETTINGS: Settings = {
+  apiKeys: {
+    openai: "",
+    anthropic: "",
+    google: "",
+  },
+  defaultModel: "gpt-4",
+  defaultTemperature: 0.7,
+  defaultMaxTokens: 2000,
+};
+
+export const storage = {
+  loadState(): AppState {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (!data) {
+        return {
+          conversations: {},
+          settings: DEFAULT_SETTINGS,
+          active_conversation_id: null,
+        };
+      }
+      return JSON.parse(data);
+    } catch (error) {
+      console.error("Failed to load state:", error);
+      return {
+        conversations: {},
+        settings: DEFAULT_SETTINGS,
+        active_conversation_id: null,
+      };
+    }
+  },
+
+  saveState(state: AppState): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.error("Failed to save state:", error);
+    }
+  },
+
+  exportConversation(conversation: Conversation): void {
+    const dataStr = JSON.stringify(conversation, null, 2);
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+    const exportFileDefaultName = `conversation-${conversation.id}.json`;
+
+    const linkElement = document.createElement("a");
+    linkElement.setAttribute("href", dataUri);
+    linkElement.setAttribute("download", exportFileDefaultName);
+    linkElement.click();
+  },
+};
