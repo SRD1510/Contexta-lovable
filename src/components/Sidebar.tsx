@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquarePlus, Trash2, Calendar } from "lucide-react";
+import { MessageSquarePlus, Trash2, Calendar, Sparkles, RefreshCw, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Conversation } from "@/types";
+import { MODEL_CONFIGS } from "@/services/api";
 import { cn } from "@/lib/utils";
-import { ContextControls } from "@/components/ContextControls";
 
 interface SidebarProps {
   conversations: Record<string, Conversation>;
@@ -35,6 +35,11 @@ export function Sidebar({
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
+  const config = activeConversation ? MODEL_CONFIGS[activeConversation.metadata.model] : null;
+  const contextWindow = config?.contextWindow || 8192;
+  const totalTokens = activeConversation?.total_tokens || 0;
+  const usagePercent = (totalTokens / contextWindow) * 100;
+
   return (
     <motion.aside
       initial={{ x: -300, opacity: 0 }}
@@ -50,13 +55,72 @@ export function Sidebar({
           New Conversation
         </Button>
 
-        <ContextControls
-          activeConversation={activeConversation}
-          onSummarize={onSummarize}
-          onStartFresh={onStartFresh}
-          onExport={onExport}
-          disabled={disabled}
-        />
+        {activeConversation && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-3"
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-sidebar-foreground">Token Usage</span>
+                <span className="font-medium text-sidebar-foreground">
+                  {totalTokens.toLocaleString()} / {contextWindow.toLocaleString()}
+                </span>
+              </div>
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-sidebar-accent">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(usagePercent, 100)}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className={cn(
+                    "h-full transition-colors duration-300",
+                    usagePercent > 90
+                      ? "bg-destructive"
+                      : usagePercent > 70
+                        ? "bg-yellow-500"
+                        : "bg-primary"
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSummarize}
+                disabled={disabled || activeConversation.messages.length === 0}
+                className="transition-transform hover:scale-105 active:scale-95"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Summarize
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onStartFresh}
+                disabled={disabled || !activeConversation.summary}
+                className="transition-transform hover:scale-105 active:scale-95"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Start Fresh
+              </Button>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+              disabled={activeConversation.messages.length === 0}
+              className="w-full transition-transform hover:scale-105 active:scale-95"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export JSON
+            </Button>
+          </motion.div>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
