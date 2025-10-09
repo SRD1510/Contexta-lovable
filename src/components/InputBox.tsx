@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Send, Loader2, ChevronDown, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ContextControls } from "@/components/ContextControls";
+import { Conversation } from "@/types";
 import {
   Select,
   SelectContent,
@@ -27,9 +29,26 @@ interface InputBoxProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   hasMessages: boolean;
+  sidebarCollapsed: boolean;
+  activeConversation: Conversation | null;
+  onSummarize: () => void;
+  onStartFresh: () => void;
+  onExport: () => void;
 }
 
-export function InputBox({ onSend, disabled, isLoading, currentModel, onModelChange, hasMessages }: InputBoxProps) {
+export function InputBox({ 
+  onSend, 
+  disabled, 
+  isLoading, 
+  currentModel, 
+  onModelChange, 
+  hasMessages,
+  sidebarCollapsed,
+  activeConversation,
+  onSummarize,
+  onStartFresh,
+  onExport,
+}: InputBoxProps) {
   const [input, setInput] = useState("");
   const [pendingModel, setPendingModel] = useState<string | null>(null);
   const [showWarning, setShowWarning] = useState(false);
@@ -81,86 +100,98 @@ export function InputBox({ onSend, disabled, isLoading, currentModel, onModelCha
         className="border-t border-border bg-background p-6"
         onSubmit={handleSubmit}
       >
-        <div className="mx-auto max-w-4xl space-y-2">
+        <div className="mx-auto max-w-4xl space-y-3">
+          {sidebarCollapsed && (
+            <div className="pb-2 border-b border-border">
+              <ContextControls
+                activeConversation={activeConversation}
+                onSummarize={onSummarize}
+                onStartFresh={onStartFresh}
+                onExport={onExport}
+                disabled={disabled}
+                compact
+              />
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <Select value={currentModel} onValueChange={handleModelSelect}>
-                <SelectTrigger className="transition-all hover:border-primary focus:shadow-glow">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Model:</span>
-                    <SelectValue />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  {Object.entries(MODEL_CONFIGS).map(([id, config]) => (
-                    <SelectItem key={id} value={id} className="cursor-pointer">
-                      <div className="flex items-center justify-between gap-4">
-                        <span>{config.name}</span>
-                        <span className="text-xs text-muted-foreground">{config.provider}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={currentModel} onValueChange={handleModelSelect}>
+              <SelectTrigger className="w-auto min-w-[200px] transition-all hover:border-primary focus:shadow-glow">
+                <div className="flex items-center gap-2">
+                  <span className="h-5 w-5 rounded-full bg-gradient-primary" />
+                  <SelectValue />
+                </div>
+                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                {Object.entries(MODEL_CONFIGS).map(([id, config]) => (
+                  <SelectItem key={id} value={id} className="cursor-pointer">
+                    <div className="flex items-center justify-between gap-4">
+                      <span>{config.name}</span>
+                      <span className="text-xs text-muted-foreground">{config.provider}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="relative flex-1">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message... (Shift+Enter for new line)"
+                disabled={disabled}
+                className="min-h-[60px] resize-none pr-12 transition-all focus:shadow-glow focus:ring-2 focus:ring-primary"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={disabled || !input.trim()}
+                className="absolute bottom-2 right-2 transition-transform hover:scale-110 active:scale-95"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
 
-          <div className="relative">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message... (Shift+Enter for new line)"
-              disabled={disabled}
-              className="min-h-[100px] resize-none pr-12 transition-all focus:shadow-glow focus:ring-2 focus:ring-primary"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={disabled || !input.trim()}
-              className="absolute bottom-3 right-3 transition-transform hover:scale-110 active:scale-95"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Estimated tokens: ~{tokenCount}</span>
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-2 text-primary"
-            >
-              <motion.span
-                animate={{ opacity: [1, 0.5, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Estimated tokens: ~{tokenCount}</span>
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2 text-primary"
               >
-                Thinking
-              </motion.span>
-              <motion.div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <motion.span
-                    key={i}
-                    animate={{ opacity: [1, 0.3, 1] }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      delay: i * 0.2,
-                    }}
-                  >
-                    •
-                  </motion.span>
-                ))}
+                <motion.span
+                  animate={{ opacity: [1, 0.5, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  Thinking
+                </motion.span>
+                <motion.div className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                      }}
+                    >
+                      •
+                    </motion.span>
+                  ))}
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
       </motion.form>
 
       <Dialog open={showWarning} onOpenChange={setShowWarning}>

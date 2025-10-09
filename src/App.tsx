@@ -8,10 +8,13 @@ import { Sidebar } from "@/components/Sidebar";
 import { ChatView } from "@/components/ChatView";
 import { InputBox } from "@/components/InputBox";
 import { SettingsModal } from "@/components/SettingsModal";
+import { SummaryEditDialog } from "@/components/SummaryEditDialog";
 import { sendMessage, MODEL_CONFIGS } from "@/services/api";
 import { storage } from "@/services/storage";
 import { Message } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +33,9 @@ function ContextManager() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState(state.settings.defaultModel);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showSummaryEdit, setShowSummaryEdit] = useState(false);
+  const [pendingSummary, setPendingSummary] = useState("");
   const { toast } = useToast();
 
   const handleNewConversation = () => {
@@ -137,10 +143,8 @@ function ContextManager() {
       );
 
       await summarizeConversation(activeConversation.id, response.content);
-      toast({
-        title: "Summary Generated",
-        description: "Conversation summary has been created successfully.",
-      });
+      setPendingSummary(response.content);
+      setShowSummaryEdit(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -150,6 +154,15 @@ function ContextManager() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSaveSummary = (editedSummary: string) => {
+    if (!activeConversation) return;
+    summarizeConversation(activeConversation.id, editedSummary);
+    toast({
+      title: "Summary Saved",
+      description: "Your summary has been updated.",
+    });
   };
 
   const handleStartFresh = () => {
@@ -179,48 +192,79 @@ function ContextManager() {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <Sidebar
-        conversations={state.conversations}
-        activeId={state.active_conversation_id}
-        activeConversation={activeConversation}
-        onNewConversation={handleNewConversation}
-        onSelectConversation={loadConversation}
-        onDeleteConversation={deleteConversation}
-        onSummarize={handleSummarize}
-        onStartFresh={handleStartFresh}
-        onExport={handleExport}
-        disabled={isLoading}
-      />
+    <>
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        {!sidebarCollapsed && (
+          <Sidebar
+            conversations={state.conversations}
+            activeId={state.active_conversation_id}
+            activeConversation={activeConversation}
+            onNewConversation={handleNewConversation}
+            onSelectConversation={loadConversation}
+            onDeleteConversation={deleteConversation}
+            onSummarize={handleSummarize}
+            onStartFresh={handleStartFresh}
+            onExport={handleExport}
+            disabled={isLoading}
+          />
+        )}
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
-          <div>
-            <h1 className="text-xl font-bold">
-              {activeConversation?.title || "Context Manager"}
-            </h1>
-            {activeConversation && (
-              <p className="text-sm text-muted-foreground">
-                {activeConversation.messages.length} messages •{" "}
-                {activeConversation.total_tokens} tokens
-              </p>
-            )}
-          </div>
-          <SettingsModal settings={state.settings} onSave={updateSettings} />
-        </header>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="transition-transform hover:scale-110"
+              >
+                {sidebarCollapsed ? (
+                  <PanelLeftOpen className="h-5 w-5" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" />
+                )}
+              </Button>
+              <div>
+                <h1 className="text-xl font-bold">
+                  {activeConversation?.title || "Context"}
+                </h1>
+                {activeConversation && (
+                  <p className="text-sm text-muted-foreground">
+                    {activeConversation.messages.length} messages •{" "}
+                    {activeConversation.total_tokens} tokens
+                  </p>
+                )}
+              </div>
+            </div>
+            <SettingsModal settings={state.settings} onSave={updateSettings} />
+          </header>
 
-        <ChatView messages={activeConversation?.messages || []} />
+          <ChatView messages={activeConversation?.messages || []} />
 
-        <InputBox 
-          onSend={handleSendMessage} 
-          disabled={isLoading} 
-          isLoading={isLoading}
-          currentModel={currentModel}
-          onModelChange={handleModelChange}
-          hasMessages={(activeConversation?.messages.length || 0) > 0}
-        />
+          <InputBox 
+            onSend={handleSendMessage} 
+            disabled={isLoading} 
+            isLoading={isLoading}
+            currentModel={currentModel}
+            onModelChange={handleModelChange}
+            hasMessages={(activeConversation?.messages.length || 0) > 0}
+            sidebarCollapsed={sidebarCollapsed}
+            activeConversation={activeConversation}
+            onSummarize={handleSummarize}
+            onStartFresh={handleStartFresh}
+            onExport={handleExport}
+          />
+        </div>
       </div>
-    </div>
+
+      <SummaryEditDialog
+        open={showSummaryEdit}
+        onOpenChange={setShowSummaryEdit}
+        summary={pendingSummary}
+        onSave={handleSaveSummary}
+        onStartFresh={handleStartFresh}
+      />
+    </>
   );
 }
 
