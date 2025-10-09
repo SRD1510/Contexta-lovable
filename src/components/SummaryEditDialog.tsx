@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,15 +28,15 @@ export function SummaryEditDialog({
 }: SummaryEditDialogProps) {
   const [editedSummary, setEditedSummary] = useState(summary);
 
+  // Update edited summary when summary prop changes
+  useEffect(() => {
+    setEditedSummary(summary);
+  }, [summary]);
+
   const handleSave = () => {
     onSave(editedSummary);
     onOpenChange(false);
   };
-
-  // Update edited summary when summary prop changes
-  if (editedSummary !== summary && summary !== editedSummary) {
-    setEditedSummary(summary);
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
