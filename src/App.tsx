@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { ChatView } from "@/components/ChatView";
 import { InputBox } from "@/components/InputBox";
 import { SettingsModal } from "@/components/SettingsModal";
+import { SummaryEditDialog } from "@/components/SummaryEditDialog";
 import { sendMessage, MODEL_CONFIGS } from "@/services/api";
 import { storage } from "@/services/storage";
 import { Message } from "@/types";
@@ -30,6 +31,8 @@ function ContextManager() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState(state.settings.defaultModel);
+  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [pendingSummary, setPendingSummary] = useState("");
   const { toast } = useToast();
 
   const handleNewConversation = () => {
@@ -136,11 +139,8 @@ function ContextManager() {
         apiKey
       );
 
-      await summarizeConversation(activeConversation.id, response.content);
-      toast({
-        title: "Summary Generated",
-        description: "Conversation summary has been created successfully.",
-      });
+      setPendingSummary(response.content);
+      setShowSummaryDialog(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -150,6 +150,16 @@ function ContextManager() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSaveSummary = async (editedSummary: string) => {
+    if (!activeConversation) return;
+
+    await summarizeConversation(activeConversation.id, editedSummary);
+    toast({
+      title: "Summary Saved",
+      description: "Conversation summary has been saved successfully.",
+    });
   };
 
   const handleStartFresh = () => {
@@ -220,6 +230,14 @@ function ContextManager() {
           hasMessages={(activeConversation?.messages.length || 0) > 0}
         />
       </div>
+
+      <SummaryEditDialog
+        open={showSummaryDialog}
+        onOpenChange={setShowSummaryDialog}
+        summary={pendingSummary}
+        onSave={handleSaveSummary}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
