@@ -30,7 +30,18 @@ export const storage = {
           active_conversation_id: null,
         };
       }
-      return JSON.parse(data);
+      const loadedState = JSON.parse(data);
+      
+      // Merge loaded settings with defaults to handle new settings fields
+      return {
+        ...loadedState,
+        settings: {
+          ...DEFAULT_SETTINGS,
+          ...loadedState.settings,
+          // Ensure autoSummarization exists with defaults if missing
+          autoSummarization: loadedState.settings?.autoSummarization || DEFAULT_SETTINGS.autoSummarization,
+        },
+      };
     } catch (error) {
       console.error("Failed to load state:", error);
       return {

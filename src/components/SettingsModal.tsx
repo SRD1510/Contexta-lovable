@@ -26,7 +26,14 @@ interface SettingsModalProps {
 export function SettingsModal({ settings, onSave }: SettingsModalProps) {
   const [open, setOpen] = useState(false);
   const [apiKeys, setApiKeys] = useState(settings.apiKeys);
-  const [autoSummarization, setAutoSummarization] = useState(settings.autoSummarization);
+  const [autoSummarization, setAutoSummarization] = useState(
+    settings.autoSummarization || {
+      enabled: true,
+      threshold: 0.7,
+      keepRecentCount: 10,
+      style: "structured" as const,
+    }
+  );
   const { toast } = useToast();
 
   const handleSave = () => {
