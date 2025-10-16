@@ -98,6 +98,25 @@ export function useAppState() {
     });
   };
 
+  const replaceMessages = (conversationId: string, messages: Message[], newTokenCount: number) => {
+    setState((prev) => {
+      const conversation = prev.conversations[conversationId];
+      if (!conversation) return prev;
+
+      return {
+        ...prev,
+        conversations: {
+          ...prev.conversations,
+          [conversationId]: {
+            ...conversation,
+            messages,
+            total_tokens: newTokenCount,
+          },
+        },
+      };
+    });
+  };
+
   const updateSettings = (settings: Partial<Settings>) => {
     setState((prev) => ({
       ...prev,
@@ -165,6 +184,7 @@ export function useAppState() {
     loadConversation,
     deleteConversation,
     addMessage,
+    replaceMessages,
     updateSettings,
     summarizeConversation,
     startFreshWithSummary,

@@ -11,6 +11,12 @@ const DEFAULT_SETTINGS: Settings = {
   defaultModel: "gemini-2.0-flash",
   defaultTemperature: 0.7,
   defaultMaxTokens: 2000,
+  autoSummarization: {
+    enabled: true,
+    threshold: 0.7,
+    keepRecentCount: 10,
+    style: "structured",
+  },
 };
 
 export const storage = {

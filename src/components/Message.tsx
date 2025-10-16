@@ -3,10 +3,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { Message as MessageType } from "@/types";
 import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
 
 interface MessageProps {
   message: MessageType;
@@ -14,6 +15,7 @@ interface MessageProps {
 
 export function Message({ message }: MessageProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -22,6 +24,76 @@ export function Message({ message }: MessageProps) {
   };
 
   const isUser = message.role === "user";
+  const isSystemSummary = message.role === "system" && message.metadata?.type === "auto_summary";
+
+  // Special rendering for auto-summary messages
+  if (isSystemSummary) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.3 }}
+        className="mx-auto my-6 max-w-3xl"
+      >
+        <div className="rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 p-6 shadow-lg">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/20 p-2">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">📝 Conversation Summary</h3>
+                <p className="text-xs text-muted-foreground">
+                  Auto-generated • {message.metadata.originalMessageCount} messages summarized
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-8 w-8 p-0"
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="prose prose-sm max-w-none overflow-hidden"
+            >
+              <div className="rounded-lg border border-border bg-card p-4">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message.content.replace("[CONVERSATION SUMMARY]\n\n", "")}
+                </ReactMarkdown>
+              </div>
+            </motion.div>
+          )}
+
+          {!isExpanded && (
+            <p className="text-sm text-muted-foreground">
+              Click to view full summary
+            </p>
+          )}
+
+          <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+            <span>⏱️ {new Date(message.timestamp).toLocaleString()}</span>
+            {message.metadata.tokens && (
+              <span>📊 {message.metadata.tokens} tokens</span>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

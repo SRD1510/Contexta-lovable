@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,9 @@ import { sendMessage, MODEL_CONFIGS } from "@/services/api";
 import { storage } from "@/services/storage";
 import { Message } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { shouldAutoSummarize, countMessageTokens } from "@/services/tokenCounter";
+import { autoSummarize } from "@/services/summarizer";
+import { toast as sonnerToast } from "sonner";
 
 const queryClient = new QueryClient();
 
@@ -24,15 +27,21 @@ function ContextManager() {
     loadConversation,
     deleteConversation,
     addMessage,
+    replaceMessages,
     updateSettings,
     summarizeConversation,
     startFreshWithSummary,
   } = useAppState();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const [currentModel, setCurrentModel] = useState(state.settings.defaultModel);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [pendingSummary, setPendingSummary] = useState("");
+  const [lastAutoSummary, setLastAutoSummary] = useState<{
+    timestamp: string;
+    tokensSaved: number;
+  } | null>(null);
   const { toast } = useToast();
 
   const handleNewConversation = () => {
@@ -97,6 +106,12 @@ function ContextManager() {
       };
 
       addMessage(conversationId, assistantMessage);
+
+      // Check if auto-summarization is needed
+      const updatedConversation = state.conversations[conversationId];
+      if (updatedConversation) {
+        await checkAndAutoSummarize(conversationId, updatedConversation.messages);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -105,6 +120,67 @@ function ContextManager() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkAndAutoSummarize = async (conversationId: string, messages: Message[]) => {
+    const { autoSummarization } = state.settings;
+    
+    if (!autoSummarization.enabled) return;
+    
+    // Check if we should auto-summarize
+    const shouldSummarize = shouldAutoSummarize(
+      messages,
+      currentModel,
+      autoSummarization.threshold
+    );
+    
+    if (!shouldSummarize) return;
+    
+    // Don't auto-summarize if we don't have enough messages
+    if (messages.length <= autoSummarization.keepRecentCount) return;
+    
+    try {
+      setIsSummarizing(true);
+      sonnerToast.loading("💡 Optimizing context...", { id: "auto-summarize" });
+      
+      const config = MODEL_CONFIGS[currentModel];
+      const apiKey = state.settings.apiKeys[config.provider];
+      
+      if (!apiKey) {
+        sonnerToast.dismiss("auto-summarize");
+        return;
+      }
+      
+      const result = await autoSummarize(
+        messages,
+        currentModel,
+        apiKey,
+        autoSummarization.keepRecentCount,
+        autoSummarization.style
+      );
+      
+      // Update conversation with summarized messages
+      const newTokenCount = countMessageTokens(result.messages, currentModel);
+      replaceMessages(conversationId, result.messages, newTokenCount);
+      
+      // Track last summary
+      setLastAutoSummary({
+        timestamp: new Date().toISOString(),
+        tokensSaved: result.tokensSaved,
+      });
+      
+      sonnerToast.success(
+        `✓ Context optimized - Summarized ${result.summarizedCount} messages, saved ${result.tokensSaved.toLocaleString()} tokens`,
+        { id: "auto-summarize", duration: 5000 }
+      );
+    } catch (error) {
+      sonnerToast.error(
+        `Failed to auto-summarize: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { id: "auto-summarize" }
+      );
+    } finally {
+      setIsSummarizing(false);
     }
   };
 
@@ -200,7 +276,9 @@ function ContextManager() {
         onSummarize={handleSummarize}
         onStartFresh={handleStartFresh}
         onExport={handleExport}
-        disabled={isLoading}
+        disabled={isLoading || isSummarizing}
+        currentModel={currentModel}
+        lastAutoSummary={lastAutoSummary}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -223,8 +301,8 @@ function ContextManager() {
 
         <InputBox 
           onSend={handleSendMessage} 
-          disabled={isLoading} 
-          isLoading={isLoading}
+          disabled={isLoading || isSummarizing} 
+          isLoading={isLoading || isSummarizing}
           currentModel={currentModel}
           onModelChange={handleModelChange}
           hasMessages={(activeConversation?.messages.length || 0) > 0}

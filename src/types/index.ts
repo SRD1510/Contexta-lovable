@@ -7,6 +7,11 @@ export interface MessageMetadata {
   provider: Provider;
   temperature: number;
   tokens?: number;
+  type?: "auto_summary" | "manual_summary" | "regular";
+  originalMessageCount?: number;
+  messageIds?: string[];
+  createdAt?: string;
+  summaryStyle?: string;
 }
 
 export interface Message {
@@ -44,6 +49,12 @@ export interface Settings {
   defaultModel: string;
   defaultTemperature: number;
   defaultMaxTokens: number;
+  autoSummarization: {
+    enabled: boolean;
+    threshold: number;
+    keepRecentCount: number;
+    style: "structured" | "concise" | "research" | "narrative";
+  };
 }
 
 export interface AppState {

@@ -3,7 +3,8 @@ import { MessageSquarePlus, Trash2, Calendar, Sparkles, RefreshCw, Download } fr
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Conversation } from "@/types";
-import { MODEL_CONFIGS } from "@/services/api";
+import { getContextUsage } from "@/services/tokenCounter";
+import { ContextUsagePanel } from "./ContextUsagePanel";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -17,6 +18,8 @@ interface SidebarProps {
   onStartFresh: () => void;
   onExport: () => void;
   disabled: boolean;
+  currentModel: string;
+  lastAutoSummary: { timestamp: string; tokensSaved: number } | null;
 }
 
 export function Sidebar({
@@ -30,15 +33,16 @@ export function Sidebar({
   onStartFresh,
   onExport,
   disabled,
+  currentModel,
+  lastAutoSummary,
 }: SidebarProps) {
   const conversationList = Object.values(conversations).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  const config = activeConversation ? MODEL_CONFIGS[activeConversation.metadata.model] : null;
-  const contextWindow = config?.contextWindow || 8192;
-  const totalTokens = activeConversation?.total_tokens || 0;
-  const usagePercent = (totalTokens / contextWindow) * 100;
+  const contextUsage = activeConversation
+    ? getContextUsage(activeConversation.messages, currentModel)
+    : null;
 
   return (
     <motion.aside
@@ -55,35 +59,20 @@ export function Sidebar({
           New Conversation
         </Button>
 
-        {activeConversation && (
+        {activeConversation && contextUsage && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-3"
           >
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-sidebar-foreground">Token Usage</span>
-                <span className="font-medium text-sidebar-foreground">
-                  {totalTokens.toLocaleString()} / {contextWindow.toLocaleString()}
-                </span>
-              </div>
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-sidebar-accent">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(usagePercent, 100)}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className={cn(
-                    "h-full transition-colors duration-300",
-                    usagePercent > 90
-                      ? "bg-destructive"
-                      : usagePercent > 70
-                        ? "bg-yellow-500"
-                        : "bg-primary"
-                  )}
-                />
-              </div>
-            </div>
+            <ContextUsagePanel
+              totalTokens={contextUsage.totalTokens}
+              contextWindow={contextUsage.contextWindow}
+              usagePercent={contextUsage.usagePercent}
+              state={contextUsage.state}
+              lastSummarizedAt={lastAutoSummary?.timestamp}
+              tokensSaved={lastAutoSummary?.tokensSaved}
+            />
 
             <div className="grid grid-cols-2 gap-2">
               <Button
