@@ -124,41 +124,41 @@ export function Sidebar({
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                  "group relative rounded-lg p-3 transition-smooth cursor-pointer",
+                  "group relative isolate rounded-lg p-3 transition-smooth cursor-pointer min-h-[80px]",
                   activeId === conversation.id
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow"
                     : "hover:bg-sidebar-accent"
                 )}
                 onClick={() => onSelectConversation(conversation.id)}
               >
-                <div className="pr-8">
-                  <h3 className="truncate font-medium">{conversation.title}</h3>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(conversation.created_at).toLocaleDateString()}</span>
+                <div className="pr-10 flex flex-col gap-1">
+                  <h3 className="truncate font-medium leading-tight">{conversation.title}</h3>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{new Date(conversation.created_at).toLocaleDateString()}</span>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground truncate">
                     {conversation.messages.length} messages • {conversation.total_tokens} tokens
                   </div>
+                  {conversation.summary && (
+                    <div className="mt-1 rounded bg-primary/10 px-2 py-1 text-xs text-primary w-fit">
+                      Has summary
+                    </div>
+                  )}
                 </div>
 
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="absolute right-2 top-2 h-8 w-8 opacity-0 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                  className="absolute right-2 top-2 h-8 w-8 z-10 opacity-0 transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100 shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteConversation(conversation.id);
                   }}
+                  aria-label="Delete conversation"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-
-                {conversation.summary && (
-                  <div className="mt-2 rounded bg-primary/10 px-2 py-1 text-xs text-primary">
-                    Has summary
-                  </div>
-                )}
               </motion.div>
             ))}
           </AnimatePresence>
