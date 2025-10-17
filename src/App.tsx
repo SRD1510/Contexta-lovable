@@ -279,14 +279,14 @@ function ContextManager() {
         lastAutoSummary={lastAutoSummary}
       />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
-          <div>
-            <h1 className="text-xl font-bold">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <header className="flex items-center justify-between border-b border-border bg-card px-4 md:px-6 py-4 flex-shrink-0">
+          <div className="min-w-0 flex-1 mr-4">
+            <h1 className="text-lg md:text-xl font-bold truncate">
               {activeConversation?.title || "Context Manager"}
             </h1>
             {activeConversation && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs md:text-sm text-muted-foreground truncate">
                 {activeConversation.messages.length} messages •{" "}
                 {activeConversation.total_tokens} tokens
               </p>

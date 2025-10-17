@@ -48,7 +48,7 @@ export function Sidebar({
     <motion.aside
       initial={{ x: -300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="flex h-screen w-80 flex-col border-r border-sidebar-border bg-sidebar"
+      className="hidden md:flex h-screen w-80 flex-col border-r border-sidebar-border bg-sidebar flex-shrink-0"
     >
       <div className="space-y-4 border-b border-sidebar-border p-4">
         <Button
@@ -112,19 +112,18 @@ export function Sidebar({
         )}
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="space-y-1 p-2">
-          <AnimatePresence mode="popLayout">
+      <ScrollArea className="flex-1 overflow-y-auto">
+        <div className="space-y-2 p-2">
+          <AnimatePresence>
             {conversationList.map((conversation) => (
               <motion.div
                 key={conversation.id}
-                layout
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
                 className={cn(
-                  "group relative isolate rounded-lg p-3 transition-smooth cursor-pointer min-h-[80px]",
+                  "group relative rounded-lg p-3 transition-all cursor-pointer",
                   activeId === conversation.id
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow"
                     : "hover:bg-sidebar-accent"
