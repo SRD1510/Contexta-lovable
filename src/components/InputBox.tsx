@@ -78,7 +78,7 @@ export function InputBox({ onSend, disabled, isLoading, currentModel, onModelCha
       <motion.form
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="border-t border-border bg-background p-6"
+        className="bg-background p-6"
         onSubmit={handleSubmit}
       >
         <div className="mx-auto max-w-4xl space-y-2">

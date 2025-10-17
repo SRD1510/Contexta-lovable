@@ -102,8 +102,8 @@ export function Message({ message }: MessageProps) {
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "flex w-full gap-4 px-6 py-4 transition-smooth",
-        isUser ? "justify-end" : "justify-start hover:bg-message-hover"
+        "flex w-full gap-4 px-6 py-4",
+        isUser ? "justify-end" : "justify-start"
       )}
     >
       <div
