@@ -107,11 +107,14 @@ function ContextManager() {
 
       addMessage(conversationId, assistantMessage);
 
-      // Check if auto-summarization is needed
-      const updatedConversation = state.conversations[conversationId];
-      if (updatedConversation) {
-        await checkAndAutoSummarize(conversationId, updatedConversation.messages);
-      }
+      // Check if auto-summarization is needed (get fresh state after updates)
+      setTimeout(async () => {
+        const conversation = state.conversations[conversationId];
+        if (conversation) {
+          const allCurrentMessages = [...conversation.messages];
+          await checkAndAutoSummarize(conversationId, allCurrentMessages);
+        }
+      }, 100);
     } catch (error) {
       toast({
         title: "Error",

@@ -59,7 +59,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     id: "gemini-2.0-flash-exp",
     name: "Gemini 2.0 Flash",
     provider: "google",
-    contextWindow: 1048576,
+    contextWindow: 5000,
     maxOutputTokens: 8192,
     apiEndpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
     requiresApiKey: true,
