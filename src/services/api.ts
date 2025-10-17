@@ -84,7 +84,7 @@ interface GoogleMessage {
 function formatForProvider(
   messages: Message[],
   provider: Provider
-): OpenAIMessage[] | { system: string; messages: AnthropicMessage[] } | { contents: GoogleMessage[] } {
+): OpenAIMessage[] | { system: string; messages: AnthropicMessage[] } | { systemInstruction?: string; contents: GoogleMessage[] } {
   switch (provider) {
     case "openai":
       return messages.map((msg) => ({
@@ -104,8 +104,14 @@ function formatForProvider(
       };
     }
 
-    case "google":
+    case "google": {
+      const systemMessages = messages.filter((m) => m.role === "system");
+      const systemInstruction = systemMessages.length > 0
+        ? systemMessages.map((m) => m.content).join("\n\n")
+        : undefined;
+      
       return {
+        systemInstruction,
         contents: messages
           .filter((m) => m.role !== "system")
           .map((msg) => ({
@@ -113,6 +119,7 @@ function formatForProvider(
             parts: [{ text: msg.content }],
           })),
       };
+    }
 
     default:
       throw new Error(`Unknown provider: ${provider}`);
@@ -199,20 +206,32 @@ export async function sendMessage(
       }
 
       case "google": {
-        const formatted = formatForProvider(messages, "google") as { contents: GoogleMessage[] };
+        const formatted = formatForProvider(messages, "google") as { 
+          systemInstruction?: string;
+          contents: GoogleMessage[];
+        };
         const url = `${config.apiEndpoint}?key=${apiKey}`;
+        
+        const requestBody: any = {
+          contents: formatted.contents,
+          generationConfig: {
+            temperature,
+            maxOutputTokens: maxTokens,
+          },
+        };
+        
+        if (formatted.systemInstruction) {
+          requestBody.systemInstruction = {
+            parts: [{ text: formatted.systemInstruction }]
+          };
+        }
+        
         const response = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            contents: formatted.contents,
-            generationConfig: {
-              temperature,
-              maxOutputTokens: maxTokens,
-            },
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
