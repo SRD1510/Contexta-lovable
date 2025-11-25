@@ -364,7 +364,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 // import { FocusModeOverlay } from "@/components/FocusModeOverlay";
 import { sendMessage, MODEL_CONFIGS } from "@/services/api";
 import { storage } from "@/services/storage";
-import { Message } from "@/types";
+import { Message, SummaryStyle, SidebarState } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   shouldAutoSummarize,
@@ -563,7 +563,7 @@ function ContextManager() {
         currentModel,
         apiKey,
         autoSummarization.keepRecentCount,
-        autoSummarization.style
+        autoSummarization.style as SummaryStyle
       );
 
       const newTokenCount = countMessageTokens(result.messages, currentModel);
@@ -747,6 +747,7 @@ function ContextManager() {
           currentModel={currentModel}
           onModelChange={handleModelChange}
           hasMessages={(activeConversation?.messages.length || 0) > 0}
+          onStop={() => {}}
         />
       </div>
 

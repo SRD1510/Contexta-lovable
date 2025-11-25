@@ -206,7 +206,7 @@
 
 
 import { useState, useEffect, useRef } from "react";
-import { AppState, Conversation, Message, Settings, SidebarState, UIPreferences } from "@/types";
+import { AppState, Conversation, Message, Settings, SidebarState, UIPreferences, SummaryStyle } from "@/types";
 import { storage } from "@/services/storage";
 import { MODEL_CONFIGS } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
@@ -247,12 +247,12 @@ export function useAppState() {
               enabled: true,
               threshold: 0.7,
               keepRecentCount: 10,
-              style: "concise",
+              style: "concise" as SummaryStyle,
             },
           },
           active_conversation_id: null,
           uiPreferences: {
-            sidebarState: "full",
+            sidebarState: "full" as SidebarState,
             sidebarWidth: 300,
             focusMode: false,
           },
@@ -318,16 +318,16 @@ export function useAppState() {
             enabled: true,
             threshold: 0.7,
             keepRecentCount: 10,
-            style: "concise",
+            style: "concise" as SummaryStyle,
           },
         },
         active_conversation_id: null,
         uiPreferences: {
-          sidebarState: "full",
+          sidebarState: "full" as SidebarState,
           sidebarWidth: 300,
           focusMode: false,
         },
-      },
+      } as AppState,
       isLoading: true,
       activeConversation: null,
       createConversation: () => "",

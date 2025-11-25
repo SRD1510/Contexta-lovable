@@ -76,6 +76,7 @@
 export type MessageRole = "user" | "assistant" | "system";
 export type Provider = "openai" | "anthropic" | "google";
 export type SidebarState = "full" | "collapsed" | "hidden";
+export type SummaryStyle = "structured" | "concise" | "research" | "narrative";
 
 export interface MessageMetadata {
   model: string;

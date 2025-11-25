@@ -73,7 +73,7 @@
 // };
 
 
-import { AppState, Conversation } from "@/types";
+import { AppState, Conversation, SummaryStyle, SidebarState } from "@/types";
 import {
   encryptApiKey,
   decryptApiKey,
@@ -159,18 +159,37 @@ export const storage = {
       }
 
       // Merge with defaults to handle new fields
-      return {
-        ...defaultState,
-        ...parsed,
+      const loadedState: AppState = {
+        conversations: parsed.conversations || defaultState.conversations,
+        active_conversation_id: parsed.active_conversation_id !== undefined 
+          ? parsed.active_conversation_id 
+          : defaultState.active_conversation_id,
         uiPreferences: {
-          ...defaultState.uiPreferences,
-          ...parsed.uiPreferences,
+          sidebarWidth: parsed.uiPreferences?.sidebarWidth || defaultState.uiPreferences.sidebarWidth,
+          focusMode: parsed.uiPreferences?.focusMode ?? defaultState.uiPreferences.focusMode,
+          // Validate sidebarState
+          sidebarState: (["full", "collapsed", "hidden"].includes(parsed.uiPreferences?.sidebarState)
+            ? parsed.uiPreferences.sidebarState
+            : defaultState.uiPreferences.sidebarState) as SidebarState,
         },
         settings: {
-          ...defaultState.settings,
-          ...parsed.settings,
+          apiKeys: parsed.settings?.apiKeys || defaultState.settings.apiKeys,
+          defaultModel: parsed.settings?.defaultModel || defaultState.settings.defaultModel,
+          defaultTemperature: parsed.settings?.defaultTemperature ?? defaultState.settings.defaultTemperature,
+          defaultMaxTokens: parsed.settings?.defaultMaxTokens ?? defaultState.settings.defaultMaxTokens,
+          autoSummarization: {
+            enabled: parsed.settings?.autoSummarization?.enabled ?? defaultState.settings.autoSummarization.enabled,
+            threshold: parsed.settings?.autoSummarization?.threshold ?? defaultState.settings.autoSummarization.threshold,
+            keepRecentCount: parsed.settings?.autoSummarization?.keepRecentCount ?? defaultState.settings.autoSummarization.keepRecentCount,
+            // Validate style
+            style: (["structured", "concise", "research", "narrative"].includes(parsed.settings?.autoSummarization?.style)
+              ? parsed.settings.autoSummarization.style
+              : defaultState.settings.autoSummarization.style) as SummaryStyle,
+          },
         },
       };
+      
+      return loadedState;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error("❌ Failed to load state:", error);
