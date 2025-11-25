@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Key, Save, Sparkles } from "lucide-react";
+import {
+  Settings as SettingsIcon,
+  Key,
+  Save,
+  Sparkles,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,10 +21,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { validateApiKeyFormat, isOpenRouterKey } from "@/lib/security";
+import { sendMessage, MODEL_CONFIGS } from "@/services/api";
 
 interface SettingsModalProps {
   settings: Settings;
@@ -34,10 +50,125 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
       style: "structured" as const,
     }
   );
+  const [validating, setValidating] = useState<{ [key: string]: boolean }>({});
+  const [validationStatus, setValidationStatus] = useState<{
+    [key: string]: "valid" | "invalid" | null;
+  }>({});
   const { toast } = useToast();
 
-  const handleSave = () => {
-    onSave({ apiKeys, autoSummarization });
+  const validateAndTestKey = async (
+    provider: "openai" | "anthropic" | "google",
+    key: string
+  ) => {
+    if (!key.trim()) {
+      setValidationStatus({ ...validationStatus, [provider]: null });
+      return;
+    }
+
+    // Format validation
+    const formatCheck = validateApiKeyFormat(key, provider);
+    if (!formatCheck.valid) {
+      setValidationStatus({ ...validationStatus, [provider]: "invalid" });
+      toast({
+        title: "Invalid API Key Format",
+        description: formatCheck.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Test the key with a minimal API call
+    setValidating({ ...validating, [provider]: true });
+    setValidationStatus({ ...validationStatus, [provider]: null });
+
+    try {
+      // Detect OpenRouter keys and use appropriate model/endpoint
+      let modelId: string;
+      if (provider === "openai" && isOpenRouterKey(key)) {
+        // Use OpenRouter model for OpenRouter keys
+        modelId = "openai/gpt-oss-20b:free";
+      } else {
+        modelId =
+          provider === "openai"
+            ? "gpt-3.5-turbo"
+            : provider === "anthropic"
+            ? "claude-3-sonnet"
+            : "gemini-2.0-flash";
+      }
+
+      await sendMessage(
+        [
+          {
+            id: "test",
+            role: "user",
+            content: "Hi",
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        modelId,
+        key,
+        0.7,
+        10 // Minimal tokens for test
+      );
+
+      setValidationStatus({ ...validationStatus, [provider]: "valid" });
+      toast({
+        title: "API Key Valid",
+        description: `${provider} API key is working correctly.`,
+      });
+    } catch (error: any) {
+      setValidationStatus({ ...validationStatus, [provider]: "invalid" });
+      const errorMessage = error?.message || "Unknown error";
+      toast({
+        title: "API Key Test Failed",
+        description:
+          errorMessage.includes("401") || errorMessage.includes("403")
+            ? "Invalid API key. Please check your key."
+            : `Test failed: ${errorMessage}`,
+        variant: "destructive",
+      });
+    } finally {
+      setValidating({ ...validating, [provider]: false });
+    }
+  };
+
+  const handleApiKeyChange = (
+    provider: "openai" | "anthropic" | "google",
+    value: string
+  ) => {
+    setApiKeys({ ...apiKeys, [provider]: value });
+    // Clear validation status when key changes
+    setValidationStatus({ ...validationStatus, [provider]: null });
+  };
+
+  const handleSave = async () => {
+    // Validate all API keys before saving
+    const providers: ("openai" | "anthropic" | "google")[] = [
+      "openai",
+      "anthropic",
+      "google",
+    ];
+    let hasErrors = false;
+
+    for (const provider of providers) {
+      if (apiKeys[provider].trim()) {
+        const formatCheck = validateApiKeyFormat(apiKeys[provider], provider);
+        if (!formatCheck.valid) {
+          toast({
+            title: "Invalid API Key",
+            description: `${provider}: ${formatCheck.error}`,
+            variant: "destructive",
+          });
+          hasErrors = true;
+        }
+      }
+    }
+
+    if (hasErrors) {
+      return;
+    }
+
+    await onSave({ apiKeys, autoSummarization });
     setOpen(false);
     toast({
       title: "Settings saved",
@@ -86,13 +217,38 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
               className="space-y-6"
             >
               <div className="space-y-2">
-                <Label htmlFor="openai">OpenAI API Key</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="openai">OpenAI API Key</Label>
+                  <div className="flex items-center gap-2">
+                    {validationStatus.openai === "valid" && (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    )}
+                    {validationStatus.openai === "invalid" && (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        validateAndTestKey("openai", apiKeys.openai)
+                      }
+                      disabled={!apiKeys.openai.trim() || validating.openai}
+                    >
+                      {validating.openai ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                  </div>
+                </div>
                 <Input
                   id="openai"
                   type="password"
                   placeholder="sk-..."
                   value={apiKeys.openai}
-                  onChange={(e) => setApiKeys({ ...apiKeys, openai: e.target.value })}
+                  onChange={(e) => handleApiKeyChange("openai", e.target.value)}
                   className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -101,36 +257,96 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="anthropic">Anthropic API Key</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="anthropic">Anthropic API Key</Label>
+                  <div className="flex items-center gap-2">
+                    {validationStatus.anthropic === "valid" && (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    )}
+                    {validationStatus.anthropic === "invalid" && (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        validateAndTestKey("anthropic", apiKeys.anthropic)
+                      }
+                      disabled={
+                        !apiKeys.anthropic.trim() || validating.anthropic
+                      }
+                    >
+                      {validating.anthropic ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                  </div>
+                </div>
                 <Input
                   id="anthropic"
                   type="password"
                   placeholder="sk-ant-..."
                   value={apiKeys.anthropic}
-                  onChange={(e) => setApiKeys({ ...apiKeys, anthropic: e.target.value })}
+                  onChange={(e) =>
+                    handleApiKeyChange("anthropic", e.target.value)
+                  }
                   className="font-mono"
                 />
-                <p className="text-xs text-muted-foreground">For Claude models</p>
+                <p className="text-xs text-muted-foreground">
+                  For Claude models
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="google">Google API Key</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="google">Google API Key</Label>
+                  <div className="flex items-center gap-2">
+                    {validationStatus.google === "valid" && (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    )}
+                    {validationStatus.google === "invalid" && (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        validateAndTestKey("google", apiKeys.google)
+                      }
+                      disabled={!apiKeys.google.trim() || validating.google}
+                    >
+                      {validating.google ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                  </div>
+                </div>
                 <Input
                   id="google"
                   type="password"
                   placeholder="AIza..."
                   value={apiKeys.google}
-                  onChange={(e) => setApiKeys({ ...apiKeys, google: e.target.value })}
+                  onChange={(e) => handleApiKeyChange("google", e.target.value)}
                   className="font-mono"
                 />
-                <p className="text-xs text-muted-foreground">For Gemini models</p>
+                <p className="text-xs text-muted-foreground">
+                  For Gemini models
+                </p>
               </div>
 
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                 <p className="text-sm text-muted-foreground">
-                  <strong className="text-foreground">Note:</strong> Your API keys are stored locally
-                  in your browser's localStorage. They are never sent to any server except the
-                  respective AI provider's API endpoints.
+                  <strong className="text-foreground">Security:</strong> Your
+                  API keys are encrypted and stored locally in your browser's
+                  localStorage. They are never sent to any server except the
+                  respective AI provider's API endpoints. Use the "Test" button
+                  to verify your keys.
                 </p>
               </div>
             </motion.div>
@@ -144,16 +360,22 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
             >
               <div className="flex items-center justify-between space-x-2">
                 <div className="space-y-0.5 flex-1">
-                  <Label htmlFor="enable-auto">Enable Automatic Summarization</Label>
+                  <Label htmlFor="enable-auto">
+                    Enable Automatic Summarization
+                  </Label>
                   <p className="text-xs text-muted-foreground">
-                    Automatically summarize conversations when context usage reaches threshold
+                    Automatically summarize conversations when context usage
+                    reaches threshold
                   </p>
                 </div>
                 <Switch
                   id="enable-auto"
                   checked={autoSummarization.enabled}
                   onCheckedChange={(checked) =>
-                    setAutoSummarization({ ...autoSummarization, enabled: checked })
+                    setAutoSummarization({
+                      ...autoSummarization,
+                      enabled: checked,
+                    })
                   }
                 />
               </div>
@@ -173,9 +395,15 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="60">60% - Early (More summaries)</SelectItem>
-                    <SelectItem value="70">70% - Balanced (Recommended)</SelectItem>
-                    <SelectItem value="80">80% - Late (Fewer summaries)</SelectItem>
+                    <SelectItem value="60">
+                      60% - Early (More summaries)
+                    </SelectItem>
+                    <SelectItem value="70">
+                      70% - Balanced (Recommended)
+                    </SelectItem>
+                    <SelectItem value="80">
+                      80% - Late (Fewer summaries)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
@@ -199,13 +427,16 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="5">5 messages</SelectItem>
-                    <SelectItem value="10">10 messages (Recommended)</SelectItem>
+                    <SelectItem value="10">
+                      10 messages (Recommended)
+                    </SelectItem>
                     <SelectItem value="15">15 messages</SelectItem>
                     <SelectItem value="20">20 messages</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Number of recent messages to keep unchanged during summarization
+                  Number of recent messages to keep unchanged during
+                  summarization
                 </p>
               </div>
 
@@ -221,7 +452,9 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="structured">Structured (Recommended)</SelectItem>
+                    <SelectItem value="structured">
+                      Structured (Recommended)
+                    </SelectItem>
                     <SelectItem value="concise">Concise</SelectItem>
                     <SelectItem value="research">Research-oriented</SelectItem>
                     <SelectItem value="narrative">Narrative</SelectItem>
@@ -234,9 +467,11 @@ export function SettingsModal({ settings, onSave }: SettingsModalProps) {
 
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                 <p className="text-sm text-muted-foreground">
-                  <strong className="text-foreground">How it works:</strong> When your conversation
-                  reaches the threshold, older messages are automatically summarized and replaced with
-                  a compact summary, preserving context while freeing up tokens for new messages.
+                  <strong className="text-foreground">How it works:</strong>{" "}
+                  When your conversation reaches the threshold, older messages
+                  are automatically summarized and replaced with a compact
+                  summary, preserving context while freeing up tokens for new
+                  messages.
                 </p>
               </div>
             </motion.div>

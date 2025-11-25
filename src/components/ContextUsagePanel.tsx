@@ -76,7 +76,9 @@ export function ContextUsagePanel({
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className={config.color}>{config.message}</span>
-          <span className="text-muted-foreground">{usagePercent.toFixed(1)}%</span>
+          <span className="text-muted-foreground">
+            {usagePercent.toFixed(1)}%
+          </span>
         </div>
       </div>
 

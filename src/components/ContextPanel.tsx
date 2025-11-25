@@ -49,7 +49,8 @@ export function ContextPanel({
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Context Usage</span>
             <span className="font-medium">
-              {conversation.total_tokens.toLocaleString()} / {contextWindow.toLocaleString()} tokens
+              {conversation.total_tokens.toLocaleString()} /{" "}
+              {contextWindow.toLocaleString()} tokens
             </span>
           </div>
           <motion.div
@@ -65,8 +66,8 @@ export function ContextPanel({
                   usagePercent > 90
                     ? "bg-destructive"
                     : usagePercent > 70
-                      ? "bg-yellow-500"
-                      : "bg-primary"
+                    ? "bg-yellow-500"
+                    : "bg-primary"
                 )}
                 style={{ width: `${Math.min(usagePercent, 100)}%` }}
               />
@@ -77,24 +78,26 @@ export function ContextPanel({
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={onSummarize}
             disabled={disabled || conversation.messages.length === 0}
-            className="transition-transform hover:scale-105 active:scale-95"
+            className="transition-transform hover:scale-105 active:scale-95 text-xs"
           >
-            <Sparkles className="mr-2 h-4 w-4" />
+            <Sparkles className="w-3 h-3 mr-1" />
             Summarize
           </Button>
 
           <Button
             variant="outline"
+            size="sm"
             onClick={onStartFresh}
             disabled={disabled || !conversation.summary}
-            className="transition-transform hover:scale-105 active:scale-95"
+            className="transition-transform hover:scale-105 active:scale-95 text-xs"
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="w-3 h-3 mr-1" />
             Fresh Start
           </Button>
 
@@ -102,9 +105,9 @@ export function ContextPanel({
             variant="outline"
             onClick={onExport}
             disabled={conversation.messages.length === 0}
-            className="transition-transform hover:scale-105 active:scale-95"
+            className="transition-transform hover:scale-105 active:scale-95 w-full text-xs"
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="w-3 h-3 mr-1" />
             Export
           </Button>
         </div>
@@ -119,7 +122,9 @@ export function ContextPanel({
               <FileText className="h-4 w-4 text-primary" />
               Current Summary
             </div>
-            <p className="text-sm text-muted-foreground">{conversation.summary}</p>
+            <p className="text-sm text-muted-foreground">
+              {conversation.summary}
+            </p>
           </motion.div>
         )}
       </div>

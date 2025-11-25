@@ -59,11 +59,21 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     id: "gemini-2.0-flash-exp",
     name: "Gemini 2.0 Flash",
     provider: "google",
-    contextWindow: 5000,
+    contextWindow: 131072,
     maxOutputTokens: 8192,
     apiEndpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
     requiresApiKey: true,
   },
+  "openai/gpt-oss-20b:free": {
+    id: "openai/gpt-oss-20b",
+    name: "GPT-OSS 20B",
+    provider: "openai",
+    contextWindow: 200000,
+    maxOutputTokens: 8192,
+    apiEndpoint: "https://openrouter.ai/api/v1/chat/completions",
+    requiresApiKey: true,
+  },
+//  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
 };
 
 interface OpenAIMessage {
@@ -161,13 +171,34 @@ export async function sendMessage(
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error?.message || "OpenAI API request failed");
+          let errorMessage = "OpenAI API request failed";
+          try {
+            const error = await response.json();
+            errorMessage = error.error?.message || error.message || errorMessage;
+            
+            // Handle specific error codes
+            if (response.status === 401) {
+              errorMessage = "Invalid API key. Please check your OpenAI API key in settings.";
+            } else if (response.status === 429) {
+              errorMessage = "Rate limit exceeded. Please try again later.";
+            } else if (response.status === 500) {
+              errorMessage = "OpenAI server error. Please try again later.";
+            }
+          } catch (e) {
+            // If JSON parsing fails, use status text
+            errorMessage = response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+          throw new Error("Invalid response format from OpenAI API");
+        }
+        
         return {
-          content: data.choices[0].message.content,
+          content: data.choices[0].message.content || "",
           tokensUsed: data.usage?.total_tokens,
         };
       }
@@ -194,14 +225,34 @@ export async function sendMessage(
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error?.message || "Anthropic API request failed");
+          let errorMessage = "Anthropic API request failed";
+          try {
+            const error = await response.json();
+            errorMessage = error.error?.message || error.message || errorMessage;
+            
+            // Handle specific error codes
+            if (response.status === 401) {
+              errorMessage = "Invalid API key. Please check your Anthropic API key in settings.";
+            } else if (response.status === 429) {
+              errorMessage = "Rate limit exceeded. Please try again later.";
+            } else if (response.status === 500) {
+              errorMessage = "Anthropic server error. Please try again later.";
+            }
+          } catch (e) {
+            errorMessage = response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
+        
+        if (!data.content || !data.content[0] || !data.content[0].text) {
+          throw new Error("Invalid response format from Anthropic API");
+        }
+        
         return {
           content: data.content[0].text,
-          tokensUsed: data.usage?.input_tokens + data.usage?.output_tokens,
+          tokensUsed: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
         };
       }
 
@@ -235,11 +286,31 @@ export async function sendMessage(
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error?.message || "Google API request failed");
+          let errorMessage = "Google API request failed";
+          try {
+            const error = await response.json();
+            errorMessage = error.error?.message || error.message || errorMessage;
+            
+            // Handle specific error codes
+            if (response.status === 401 || response.status === 403) {
+              errorMessage = "Invalid API key. Please check your Google API key in settings.";
+            } else if (response.status === 429) {
+              errorMessage = "Rate limit exceeded. Please try again later.";
+            } else if (response.status === 500) {
+              errorMessage = "Google server error. Please try again later.";
+            }
+          } catch (e) {
+            errorMessage = response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
+        
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content?.parts?.[0]?.text) {
+          throw new Error("Invalid response format from Google API");
+        }
+        
         return {
           content: data.candidates[0].content.parts[0].text,
           tokensUsed: data.usageMetadata?.totalTokenCount,
@@ -251,6 +322,10 @@ export async function sendMessage(
     }
   } catch (error) {
     if (error instanceof Error) {
+      // Check for network errors
+      if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        throw new Error("Network error. Please check your internet connection and try again.");
+      }
       throw error;
     }
     throw new Error("Unknown error occurred while sending message");

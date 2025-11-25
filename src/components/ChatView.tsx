@@ -6,9 +6,10 @@ import { Message as MessageType } from "@/types";
 
 interface ChatViewProps {
   messages: MessageType[];
+  onEditMessage?: (messageId: string, newContent: string) => void;
 }
 
-export function ChatView({ messages }: ChatViewProps) {
+export function ChatView({ messages, onEditMessage }: ChatViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,7 +28,9 @@ export function ChatView({ messages }: ChatViewProps) {
             className="flex h-full flex-col items-center justify-center gap-6 px-6 py-24 text-center"
           >
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold tracking-tight">Context Manager</h2>
+              <h2 className="text-3xl font-bold tracking-tight">
+                Context Manager
+              </h2>
               <p className="text-lg text-muted-foreground">
                 Your intelligent multi-model AI assistant
               </p>
@@ -37,11 +40,13 @@ export function ChatView({ messages }: ChatViewProps) {
               {[
                 {
                   title: "Multi-Model Support",
-                  description: "Switch between GPT-4, Claude, and Gemini seamlessly",
+                  description:
+                    "Switch between GPT-4, Claude, and Gemini seamlessly",
                 },
                 {
                   title: "Context Management",
-                  description: "Track token usage and manage conversation context",
+                  description:
+                    "Track token usage and manage conversation context",
                 },
                 {
                   title: "Export & Summary",
@@ -56,7 +61,9 @@ export function ChatView({ messages }: ChatViewProps) {
                   className="rounded-lg border border-border bg-card p-6 shadow-card transition-smooth hover:border-primary hover:shadow-glow"
                 >
                   <h3 className="mb-2 font-semibold">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {feature.description}
+                  </p>
                 </motion.div>
               ))}
             </div>
@@ -67,8 +74,15 @@ export function ChatView({ messages }: ChatViewProps) {
           </motion.div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {messages.map((message) => (
-              <Message key={message.id} message={message} />
+            {messages.map((message, index) => (
+              <Message
+                key={message.id}
+                message={message}
+                isGenerating={
+                  index === messages.length - 1 && message.role === "assistant"
+                }
+                onEditMessage={onEditMessage}
+              />
             ))}
           </AnimatePresence>
         )}

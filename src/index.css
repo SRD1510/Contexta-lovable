@@ -9,6 +9,7 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 240 10% 3.9%;
+     /* --background: 0, 0%, 100%, 0.4; */
     --foreground: 0 0% 98%;
 
     --card: 240 8% 8%;
@@ -26,7 +27,9 @@ All colors MUST be HSL.
     --muted: 240 6% 12%;
     --muted-foreground: 240 5% 64.9%;
 
-    --accent: 263 70% 60%;
+    /* --accent: 263 70% 60%; */
+    /* --accent: oklch(0.97 0 0); */
+    --accent: oklch(0.205 0 0);
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
@@ -47,12 +50,14 @@ All colors MUST be HSL.
     
     --shadow-glow: 0 0 40px hsl(263 70% 60% / 0.2);
     --shadow-card: 0 4px 20px hsl(240 10% 3.9% / 0.4);
+     /* --shadow-card: 0 4px 20px hsla(0, 0%, 100%, 0.4); */
 
     --sidebar-background: 240 8% 6%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 263 70% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 6% 12%;
+    /* --sidebar-accent: 240 6% 12%; */
+    --sidebar-accent: 240 6% 12% ;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 6% 18%;
     --sidebar-ring: 263 70% 60%;
